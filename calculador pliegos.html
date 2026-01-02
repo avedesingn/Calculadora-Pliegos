@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Calculadora de copias por pliego</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      color: #222;
+      background: #f4f4f6;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      max-width: 960px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+      padding: 20px 24px 28px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    fieldset {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 14px 16px 10px;
+      margin: 0 0 12px;
+    }
+
+    legend {
+      padding: 0 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .row label {
+      font-size: 14px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .unit {
+      font-size: 12px;
+      color: #777;
+      text-align: right;
+    }
+
+    .sheet-options {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .sheet-options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .highlight {
+      margin-top: 4px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #f0f4ff;
+      border: 1px solid #c9d5ff;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .highlight span.main {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .results-extra {
+      margin-top: 6px;
+      font-size: 14px;
+    }
+
+    .warning {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #b3261e;
+    }
+
+    .sheets-block {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #f8f8f8;
+      border: 1px solid #e0e0e0;
+      font-size: 14px;
+    }
+
+    .sheets-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .sheets-row {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .sheets-result {
+      margin-top: 6px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    /* Vista del pliego */
+    .preview-card {
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      padding: 12px;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preview-header {
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sheet {
+      --sheet-ratio: 3 / 2;
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      border-radius: 8px;
+      border: 2px solid #999;
+      background: repeating-linear-gradient(
+        45deg,
+        #fdfdfd,
+        #fdfdfd 8px,
+        #f6f6f6 8px,
+        #f6f6f6 16px
+      );
+      aspect-ratio: var(--sheet-ratio);
+      display: flex;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+
+    .grid-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .printable-area {
+      position: absolute;
+      border-radius: 4px;
+      border: 1px dashed #bbbbbb;
+      background: rgba(255, 255, 255, 0.5);
+      box-sizing: border-box;
+    }
+
+    .item-box {
+      position: absolute;
+      background: #ffc94e;
+      border-radius: 3px;
+      border: 1px solid #e19c25;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+      box-sizing: border-box;
+    }
+
+    .footer-note {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #666;
+      text-align: right;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>Calculadora de copias por pliego</h1>
+
+  <div class="grid">
+    <!-- Panel izquierdo: controles -->
+    <div>
+      <fieldset>
+        <legend>Pliego</legend>
+        <div class="sheet-options">
+          <label>
+            <input type="radio" name="sheet-type" value="SRA3" checked />
+            SRA3 (320 × 450 mm)
+          </label>
+          <label>
+            <input type="radio" name="sheet-type" value="A3" />
+            A3 (297 × 420 mm)
+          </label>
+          <label>
+            <input type="radio" name="sheet-type" value="custom" />
+            Personalizado
+          </label>
+        </div>
+
+        <div class="row">
+          <label for="sheet-width">Ancho pliego</label>
+          <input type="number" id="sheet-width" value="320" min="10" />
+          <div class="unit">mm</div>
+        </div>
+        <div class="row">
+          <label for="sheet-height">Alto pliego</label>
+          <input type="number" id="sheet-height" value="450" min="10" />
+          <div class="unit">mm</div>
+        </div>
+        <div class="row">
+          <label for="margin">Perímetro no imprimible</label>
+          <input type="number" id="margin" value="10" min="0" />
+          <div class="unit">mm (todo alrededor)</div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Pieza a imprimir</legend>
+        <div class="row">
+          <label for="item-width">Ancho pieza</label>
+          <input type="number" id="item-width" value="85" min="1" />
+          <div class="unit">mm</div>
+        </div>
+        <div class="row">
+          <label for="item-height">Alto pieza</label>
+          <input type="number" id="item-height" value="55" min="1" />
+          <div class="unit">mm</div>
+        </div>
+        <div class="row">
+          <label for="gap">Separación entre piezas</label>
+          <input type="number" id="gap" value="6" min="0" />
+          <div class="unit">mm</div>
+        </div>
+      </fieldset>
+
+      <div id="highlight" class="highlight" style="display:none;"></div>
+      <div class="results-extra" id="results"></div>
+      <div class="warning" id="warning"></div>
+
+      <div class="sheets-block">
+        <div class="sheets-title">Cálculo de pliegos necesarios</div>
+        <div class="sheets-row">
+          <label for="quantity">Cantidad a imprimir</label>
+          <input type="number" id="quantity" value="100" min="1" />
+          <div class="unit">uds</div>
+        </div>
+        <div class="sheets-result" id="sheets-result">
+          Pliegos necesarios: –
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel derecho: vista del pliego -->
+    <div>
+      <div class="preview-card">
+        <div class="preview-header">
+          <span>Esquema del pliego</span>
+          <span id="orientation-label" style="font-size:12px;color:#333;"></span>
+        </div>
+
+        <div class="sheet" id="sheet">
+          <div class="grid-inner" id="grid-inner"></div>
+        </div>
+
+        <div class="footer-note">
+          Escala proporcional exacta en mm (sólo orientativo a nivel visual).
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const sheetWidthInput = document.getElementById("sheet-width");
+  const sheetHeightInput = document.getElementById("sheet-height");
+  const marginInput = document.getElementById("margin");
+  const itemWidthInput = document.getElementById("item-width");
+  const itemHeightInput = document.getElementById("item-height");
+  const gapInput = document.getElementById("gap");
+  const resultsDiv = document.getElementById("results");
+  const warningDiv = document.getElementById("warning");
+  const sheetEl = document.getElementById("sheet");
+  const gridInner = document.getElementById("grid-inner");
+  const orientationLabel = document.getElementById("orientation-label");
+  const sheetTypeRadios = document.querySelectorAll("input[name='sheet-type']");
+  const highlightDiv = document.getElementById("highlight");
+  const quantityInput = document.getElementById("quantity");
+  const sheetsResultDiv = document.getElementById("sheets-result");
+
+  let lastBestTotal = 0; // para el cálculo de pliegos
+
+  sheetTypeRadios.forEach(radio => {
+    radio.addEventListener("change", () => {
+      if (radio.checked) {
+        if (radio.value === "SRA3") {
+          sheetWidthInput.value = 320;
+          sheetHeightInput.value = 450;
+        } else if (radio.value === "A3") {
+          sheetWidthInput.value = 297;
+          sheetHeightInput.value = 420;
+        }
+      }
+      calculate();
+    });
+  });
+
+  [
+    sheetWidthInput,
+    sheetHeightInput,
+    marginInput,
+    itemWidthInput,
+    itemHeightInput,
+    gapInput
+  ].forEach(input => input.addEventListener("input", calculate));
+
+  quantityInput.addEventListener("input", updateSheetsNeeded);
+
+  function calcLayout(usableW, usableH, itemW, itemH, gap) {
+    if (usableW <= 0 || usableH <= 0 || itemW > usableW || itemH > usableH) {
+      return { cols: 0, rows: 0, total: 0 };
+    }
+    const cols = Math.max(
+      0,
+      Math.floor((usableW + gap) / (itemW + gap))
+    );
+    const rows = Math.max(
+      0,
+      Math.floor((usableH + gap) / (itemH + gap))
+    );
+    return { cols, rows, total: cols * rows };
+  }
+
+  function calculate() {
+    const sheetW = parseFloat(sheetWidthInput.value) || 0;
+    const sheetH = parseFloat(sheetHeightInput.value) || 0;
+    const margin = parseFloat(marginInput.value) || 0;
+    const itemW = parseFloat(itemWidthInput.value) || 0;
+    const itemH = parseFloat(itemHeightInput.value) || 0;
+    const gap = parseFloat(gapInput.value) || 0;
+
+    warningDiv.textContent = "";
+    resultsDiv.innerHTML = "";
+    highlightDiv.style.display = "none";
+    highlightDiv.innerHTML = "";
+    lastBestTotal = 0;
+
+    if (sheetW <= 0 || sheetH <= 0 || itemW <= 0 || itemH <= 0) {
+      warningDiv.textContent = "Introduce medidas válidas en pliego y pieza.";
+      gridInner.innerHTML = "";
+      updateSheetsNeeded();
+      return;
+    }
+
+    const usableW = sheetW - 2 * margin;
+    const usableH = sheetH - 2 * margin;
+
+    if (usableW <= 0 || usableH <= 0) {
+      warningDiv.textContent =
+        "El perímetro no imprimible es demasiado grande para el tamaño de pliego.";
+      gridInner.innerHTML = "";
+      updateSheetsNeeded();
+      return;
+    }
+
+    const layoutNormal = calcLayout(usableW, usableH, itemW, itemH, gap);
+    const layoutRotated = calcLayout(usableW, usableH, itemH, itemW, gap);
+
+    if (layoutNormal.total === 0 && layoutRotated.total === 0) {
+      warningDiv.textContent =
+        "La pieza no cabe en el área imprimible del pliego con las medidas indicadas.";
+      gridInner.innerHTML = "";
+      updateSheetsNeeded();
+      return;
+    }
+
+    // Elegimos el mejor
+    let best = layoutNormal;
+    let usedRotation = false;
+    if (layoutRotated.total > layoutNormal.total) {
+      best = layoutRotated;
+      usedRotation = true;
+    }
+
+    lastBestTotal = best.total;
+
+    const totalNormal = layoutNormal.total;
+    const totalRotated = layoutRotated.total;
+
+    // Dimensiones reales colocadas en el pliego
+    const placedW = usedRotation ? itemH : itemW;
+    const placedH = usedRotation ? itemW : itemH;
+    const orientation =
+      placedW >= placedH ? "Horizontal" : "Vertical";
+
+    // Banda destacada
+    highlightDiv.style.display = "block";
+    highlightDiv.innerHTML =
+      `<span class="main">Copias por pliego: ${best.total}</span><br>` +
+      `${orientation} · ${best.cols} × ${best.rows}`;
+
+    // Texto detallado
+    const detail = document.createElement("div");
+    detail.innerHTML =
+      `Sin girar: <strong>${totalNormal}</strong> · Girando la pieza: <strong>${totalRotated}</strong>`;
+
+    const info = document.createElement("div");
+    info.style.marginTop = "4px";
+    info.innerHTML =
+      `Colocación óptima: <strong>${orientation}</strong>, ` +
+      `<strong>${best.cols}</strong> columnas × <strong>${best.rows}</strong> filas.`;
+
+    resultsDiv.appendChild(detail);
+    resultsDiv.appendChild(info);
+
+    // Etiqueta arriba del pliego
+    orientationLabel.textContent =
+      `Piezas en ${orientation.toLowerCase()} sobre el pliego`;
+
+    // Vista del pliego a escala proporcional
+    renderPreview(
+      sheetW,
+      sheetH,
+      margin,
+      placedW,
+      placedH,
+      best.cols,
+      best.rows,
+      gap
+    );
+
+    updateSheetsNeeded();
+  }
+
+  function renderPreview(sheetW, sheetH, margin, itemW, itemH, cols, rows, gap) {
+    sheetEl.style.setProperty("--sheet-ratio", `${sheetW} / ${sheetH}`);
+    gridInner.innerHTML = "";
+    if (cols <= 0 || rows <= 0) return;
+
+    const rect = gridInner.getBoundingClientRect();
+    const innerW = rect.width;
+    const innerH = rect.height;
+
+    if (!innerW || !innerH) return;
+
+    const scale = Math.min(innerW / sheetW, innerH / sheetH);
+
+    const usedSheetW = sheetW * scale;
+    const usedSheetH = sheetH * scale;
+
+    const offsetX = (innerW - usedSheetW) / 2;
+    const offsetY = (innerH - usedSheetH) / 2;
+
+    const printableWmm = sheetW - 2 * margin;
+    const printableHmm = sheetH - 2 * margin;
+    const printableWpx = printableWmm * scale;
+    const printableHpx = printableHmm * scale;
+
+    const printableLeft = offsetX + margin * scale;
+    const printableTop = offsetY + margin * scale;
+
+    // Dibujamos área imprimible
+    const printable = document.createElement("div");
+    printable.className = "printable-area";
+    printable.style.left = `${printableLeft}px`;
+    printable.style.top = `${printableTop}px`;
+    printable.style.width = `${printableWpx}px`;
+    printable.style.height = `${printableHpx}px`;
+    gridInner.appendChild(printable);
+
+    // Tamaño total ocupado por la imposición dentro del área imprimible (en mm)
+    const totalWidthMm =
+      cols * itemW + (cols > 1 ? (cols - 1) * gap : 0);
+    const totalHeightMm =
+      rows * itemH + (rows > 1 ? (rows - 1) * gap : 0);
+
+    // Lo centramos dentro del área imprimible
+    const startXInPrintableMm = Math.max(
+      0,
+      (printableWmm - totalWidthMm) / 2
+    );
+    const startYInPrintableMm = Math.max(
+      0,
+      (printableHmm - totalHeightMm) / 2
+    );
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const box = document.createElement("div");
+        box.className = "item-box";
+
+        const xMm =
+          margin +
+          startXInPrintableMm +
+          c * (itemW + gap);
+        const yMm =
+          margin +
+          startYInPrintableMm +
+          r * (itemH + gap);
+
+        const xPx = offsetX + xMm * scale;
+        const yPx = offsetY + yMm * scale;
+        const wPx = itemW * scale;
+        const hPx = itemH * scale;
+
+        box.style.left = `${xPx}px`;
+        box.style.top = `${yPx}px`;
+        box.style.width = `${wPx}px`;
+        box.style.height = `${hPx}px`;
+
+        gridInner.appendChild(box);
+      }
+    }
+  }
+
+  function updateSheetsNeeded() {
+    const qty = parseFloat(quantityInput.value) || 0;
+
+    if (!lastBestTotal || lastBestTotal <= 0 || qty <= 0) {
+      sheetsResultDiv.textContent = "Pliegos necesarios: –";
+      return;
+    }
+
+    const sheets = Math.ceil(qty / lastBestTotal);
+    sheetsResultDiv.textContent =
+      `Pliegos necesarios: ${sheets} (para ${qty} uds)`;
+  }
+
+  // Cálculo inicial
+  window.addEventListener("load", calculate);
+  window.addEventListener("resize", calculate);
+</script>
+</body>
+</html>
